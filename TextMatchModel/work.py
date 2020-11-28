@@ -19,7 +19,7 @@ def init_csv(sequences, references, save_file):
     df.to_csv(save_file)
 
 
-def main(vocab_file, embeddings_file, pretrained_file, max_length=50, gpu_index=0, batch_size=128):
+def main(inputs, vocab_file, embeddings_file, pretrained_file, max_length=50, gpu_index=0, batch_size=128):
     device = torch.device("cuda:{}".format(gpu_index) if torch.cuda.is_available() else "cpu")
     # print(20 * "=", " Preparing for testing ", 20 * "=")
     if platform == "linux" or platform == "linux2":
@@ -27,9 +27,7 @@ def main(vocab_file, embeddings_file, pretrained_file, max_length=50, gpu_index=
     else:
         checkpoint = torch.load(pretrained_file, map_location=device)
     # Retrieving model parameters from checkpoint.
-    print("loding")
     embeddings = load_embeddings(embeddings_file)
-    print("loaed")
     # print("\t* Loading test data...")
     # test_data = LCQMC_Dataset(test_file, vocab_file, max_length)
     # test_loader = DataLoader(test_data, shuffle=True, batch_size=batch_size)
@@ -42,19 +40,24 @@ def main(vocab_file, embeddings_file, pretrained_file, max_length=50, gpu_index=
 
     # input("enter to continue")
     # inputs = [line for line in open('./data/input.txt', 'r', encoding='utf-8')]
-    inputs = input()
     inputs = re.split(r"。|\.|？|\n", inputs)
     inputs = [seq.strip() for seq in inputs if len(seq.strip())!=0]
     init_csv(inputs, database, './data/work_data.csv')
     dataset = LCQMC_Dataset('./data/work_data.csv', vocab_file, max_length)
     dataloader = DataLoader(dataset, shuffle=False, batch_size=batch_size)
     prob = get_score(model, dataloader)
+    ans=""
     for i, p in enumerate(prob):
         if p > 0.5:
-            print(inputs[i//len(database)])
-            print(database[i % len(database)])
-            print(p.item())
+            ans += inputs[i//len(database)]+"$"
+            ans += database[i % len(database)]+"$"
+            ans += str(p.item())+"@"
+    return ans
 
 
-if __name__ == '__main__':
-    main("./data/vocab.txt", "./data/token_vec_300.bin", "./models/best.pth.tar")
+def run(inputs):
+    return main(inputs, "./data/vocab.txt", "./data/token_vec_300.bin", "./models/best.pth.tar")
+
+
+# if __name__ == '__main__':
+#     main("./data/vocab.txt", "./data/token_vec_300.bin", "./models/best.pth.tar")
